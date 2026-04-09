@@ -2,6 +2,7 @@ import AppKit
 
 public class AppDelegate: NSObject, NSApplicationDelegate {
     var statusBar: StatusBarController!
+    var floatingIndicator: FloatingIndicator!
     var hotkeyManager: HotkeyManager?
     var recorder: AudioRecorder!
     var transcriber: Transcriber!
@@ -13,6 +14,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
         statusBar = StatusBarController()
+        floatingIndicator = FloatingIndicator()
         recorder = AudioRecorder()
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -225,6 +227,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         guard !isPressed else { return }
         isPressed = true
         statusBar.state = .recording
+        floatingIndicator.show(state: .recording)
         do {
             let outputURL: URL
             if Config.effectiveMaxRecordings(config.maxRecordings) == 0 {
@@ -237,6 +240,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             print("Error: \(error.localizedDescription)")
             isPressed = false
             statusBar.state = .idle
+            floatingIndicator.hide()
         }
     }
 
@@ -246,10 +250,12 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
         guard let audioURL = recorder.stopRecording() else {
             statusBar.state = .idle
+            floatingIndicator.hide()
             return
         }
 
         statusBar.state = .transcribing
+        floatingIndicator.show(state: .transcribing)
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
@@ -266,6 +272,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                     RecordingStore.prune(maxCount: maxRecordings)
                 }
                 DispatchQueue.main.async {
+                    self.floatingIndicator.hide()
                     if !text.isEmpty {
                         self.lastTranscription = text
                         self.inserter.insert(text: text)
@@ -278,6 +285,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                     RecordingStore.prune(maxCount: maxRecordings)
                 }
                 DispatchQueue.main.async {
+                    self.floatingIndicator.hide()
                     print("Error: \(error.localizedDescription)")
                     self.statusBar.state = .error(error.localizedDescription)
                     self.statusBar.buildMenu()
