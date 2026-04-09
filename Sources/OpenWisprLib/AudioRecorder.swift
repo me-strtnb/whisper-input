@@ -8,6 +8,7 @@ class AudioRecorder {
     private var isRecording = false
     private var currentOutputURL: URL?
     var preferredDeviceID: AudioDeviceID?
+    var onAudioLevel: ((Float) -> Void)?
 
     func startRecording(to outputURL: URL) throws {
         guard !isRecording else { return }
@@ -60,6 +61,20 @@ class AudioRecorder {
 
             if error == nil && convertedBuffer.frameLength > 0 {
                 try? self.audioFile?.write(from: convertedBuffer)
+
+                // Calculate RMS level for visualization
+                if let channelData = buffer.floatChannelData?[0] {
+                    let count = Int(buffer.frameLength)
+                    var sumOfSquares: Float = 0
+                    for i in 0..<count {
+                        let sample = channelData[i]
+                        sumOfSquares += sample * sample
+                    }
+                    let rms = sqrt(sumOfSquares / Float(max(count, 1)))
+                    // Normalize: typical speech RMS is 0.01-0.1
+                    let level = min(1.0, rms * 10.0)
+                    self.onAudioLevel?(level)
+                }
             }
         }
 

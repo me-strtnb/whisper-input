@@ -16,6 +16,9 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         statusBar = StatusBarController()
         floatingIndicator = FloatingIndicator()
         recorder = AudioRecorder()
+        recorder.onAudioLevel = { [weak self] level in
+            self?.floatingIndicator.updateAudioLevel(level)
+        }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.setup()
