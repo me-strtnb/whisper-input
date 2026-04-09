@@ -28,6 +28,10 @@ public class Transcriber {
             "-nt",
             "-np",
         ]
+        // Prompt with punctuated text to guide whisper's output style
+        if language == "ja" {
+            args += ["--prompt", "こんにちは。今日はいい天気ですね。はい、そうです！"]
+        }
         if spokenPunctuation {
             args += ["--suppress-regex", "[,\\.\\?!;:\\-—]"]
         }
