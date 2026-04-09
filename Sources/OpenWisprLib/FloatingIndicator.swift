@@ -9,12 +9,25 @@ class FloatingIndicator {
         if window == nil {
             createWindow()
         }
+        positionOnActiveScreen()
         contentView?.state = state
         contentView?.audioLevel = 0
         if state == .transcribing {
             startTranscribingAnimation()
         }
         window?.orderFront(nil)
+    }
+
+    private func positionOnActiveScreen() {
+        guard let w = window else { return }
+        // Use the screen that has the mouse cursor (= active screen)
+        let mouseLocation = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) }) ?? NSScreen.main
+        guard let activeScreen = screen else { return }
+        let screenFrame = activeScreen.visibleFrame
+        let x = screenFrame.midX - w.frame.width / 2
+        let y = screenFrame.minY + 24
+        w.setFrameOrigin(NSPoint(x: x, y: y))
     }
 
     func hide() {
