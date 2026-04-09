@@ -25,8 +25,8 @@ public class Transcriber {
             "-m", modelPath,
             "-f", audioURL.path,
             "-l", language,
-            "--no-timestamps",
             "-nt",
+            "-np",
         ]
         if spokenPunctuation {
             args += ["--suppress-regex", "[,\\.\\?!;:\\-—]"]
