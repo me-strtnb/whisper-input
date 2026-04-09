@@ -20,13 +20,12 @@ class FloatingIndicator {
 
     private func positionOnActiveScreen() {
         guard let w = window else { return }
-        // Use the screen that has the mouse cursor (= active screen)
         let mouseLocation = NSEvent.mouseLocation
         let screen = NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) }) ?? NSScreen.main
         guard let activeScreen = screen else { return }
         let screenFrame = activeScreen.visibleFrame
         let x = screenFrame.midX - w.frame.width / 2
-        let y = screenFrame.minY + 24
+        let y = screenFrame.minY + 32
         w.setFrameOrigin(NSPoint(x: x, y: y))
     }
 
@@ -38,20 +37,20 @@ class FloatingIndicator {
     func updateAudioLevel(_ level: Float) {
         DispatchQueue.main.async { [weak self] in
             guard let view = self?.contentView else { return }
-            // Smooth the level for natural movement
-            view.audioLevel = view.audioLevel * 0.3 + level * 0.7
+            // Smooth but responsive
+            view.audioLevel = view.audioLevel * 0.15 + level * 0.85
             view.needsDisplay = true
         }
     }
 
     private func createWindow() {
-        let width: CGFloat = 72
-        let height: CGFloat = 36
+        let width: CGFloat = 90
+        let height: CGFloat = 44
 
         guard let screen = NSScreen.main else { return }
         let screenFrame = screen.visibleFrame
         let x = screenFrame.midX - width / 2
-        let y = screenFrame.minY + 24
+        let y = screenFrame.minY + 32
 
         let frame = NSRect(x: x, y: y, width: width, height: height)
         let w = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
@@ -94,7 +93,6 @@ private class IndicatorView: NSView {
     var animationPhase: Double = 0
     var audioLevel: Float = 0
 
-    // Keep recent levels for per-bar variation
     private var levelHistory: [Float] = [0, 0, 0, 0, 0]
     private var historyIndex = 0
 
@@ -103,11 +101,19 @@ private class IndicatorView: NSView {
 
         let rect = bounds
 
-        // Background pill
-        let bgColor = NSColor(calibratedRed: 0.15, green: 0.15, blue: 0.17, alpha: 0.95)
-        bgColor.setFill()
+        // Glass-style background
         let pillPath = NSBezierPath(roundedRect: rect, xRadius: rect.height / 2, yRadius: rect.height / 2)
+
+        // Dark translucent fill
+        NSColor(calibratedWhite: 0.1, alpha: 0.65).setFill()
         pillPath.fill()
+
+        // Inner light border for glass edge
+        NSColor(calibratedWhite: 1.0, alpha: 0.15).setStroke()
+        let insetRect = rect.insetBy(dx: 0.5, dy: 0.5)
+        let borderPath = NSBezierPath(roundedRect: insetRect, xRadius: insetRect.height / 2, yRadius: insetRect.height / 2)
+        borderPath.lineWidth = 1.0
+        borderPath.stroke()
 
         switch state {
         case .recording:
@@ -118,51 +124,64 @@ private class IndicatorView: NSView {
     }
 
     private func drawRecording(in rect: NSRect) {
-        // Update level history for per-bar variation
+        // Update level history
         levelHistory[historyIndex] = audioLevel
         historyIndex = (historyIndex + 1) % levelHistory.count
 
-        // Blue dot with subtle pulse based on audio level
-        let dotSize: CGFloat = 12
-        let dotX: CGFloat = 14
+        // Blue dot — glows brighter with audio
+        let dotSize: CGFloat = 14
+        let dotX: CGFloat = 18
         let dotY = rect.midY - dotSize / 2
         let dotRect = NSRect(x: dotX, y: dotY, width: dotSize, height: dotSize)
 
-        let brightness = CGFloat(0.7 + 0.3 * audioLevel)
-        NSColor(calibratedRed: 0.25 * brightness, green: 0.52 * brightness, blue: 1.0, alpha: 1.0).setFill()
+        // Glow behind dot
+        let glowLevel = CGFloat(audioLevel)
+        if glowLevel > 0.05 {
+            let glowSize = dotSize + 8 * glowLevel
+            let glowRect = NSRect(x: dotX - (glowSize - dotSize) / 2, y: dotY - (glowSize - dotSize) / 2, width: glowSize, height: glowSize)
+            NSColor(calibratedRed: 0.3, green: 0.55, blue: 1.0, alpha: 0.25 * glowLevel).setFill()
+            NSBezierPath(ovalIn: glowRect).fill()
+        }
+
+        let brightness = CGFloat(0.75 + 0.25 * audioLevel)
+        NSColor(calibratedRed: 0.2 * brightness, green: 0.5 * brightness, blue: 1.0, alpha: 1.0).setFill()
         NSBezierPath(ovalIn: dotRect).fill()
 
-        // Waveform bars driven by audio level
+        // Waveform bars — much more dynamic range
         let barCount = 5
-        let barWidth: CGFloat = 2.5
-        let barGap: CGFloat = 2.5
-        let barStartX: CGFloat = 34
-        let minHeight: CGFloat = 2.5
-        let maxHeights: [CGFloat] = [6, 10, 14, 10, 6]
-
-        NSColor.white.setFill()
+        let barWidth: CGFloat = 3.0
+        let barGap: CGFloat = 3.0
+        let barStartX: CGFloat = 40
+        let minHeight: CGFloat = 3.0
+        let maxHeights: [CGFloat] = [8, 14, 20, 14, 8]
 
         for i in 0..<barCount {
-            // Use slightly offset history entries for each bar
             let idx = (historyIndex + i) % levelHistory.count
-            let barLevel = CGFloat(levelHistory[idx])
+            // Amplify the level for more dramatic movement
+            let rawLevel = levelHistory[idx]
+            let amplified = min(1.0, Float(pow(Double(rawLevel), 0.6)) * 1.8)
+            let barLevel = CGFloat(amplified)
             let height = minHeight + (maxHeights[i] - minHeight) * barLevel
             let x = barStartX + CGFloat(i) * (barWidth + barGap)
             let y = rect.midY - height / 2
             let barRect = NSRect(x: x, y: y, width: barWidth, height: height)
-            NSBezierPath(roundedRect: barRect, xRadius: 1.25, yRadius: 1.25).fill()
+
+            // Bars get brighter with higher level
+            let barAlpha = CGFloat(0.6 + 0.4 * amplified)
+            NSColor.white.withAlphaComponent(barAlpha).setFill()
+            NSBezierPath(roundedRect: barRect, xRadius: 1.5, yRadius: 1.5).fill()
         }
     }
 
     private func drawTranscribing(in rect: NSRect) {
-        let dotSize: CGFloat = 6
-        let gap: CGFloat = 8
+        let dotSize: CGFloat = 7
+        let gap: CGFloat = 9
         let totalWidth = 3 * dotSize + 2 * gap
         let startX = rect.midX - totalWidth / 2
 
         for i in 0..<3 {
             let phase = animationPhase * 1.5 - Double(i) * 0.25
-            let bounce = CGFloat(max(0, sin(phase * .pi * 2))) * 4.0
+            let bounce = CGFloat(max(0, sin(phase * .pi * 2))) * 5.0
             let alpha = CGFloat(0.4 + 0.6 * max(0, sin(phase * .pi * 2)))
             let x = startX + CGFloat(i) * (dotSize + gap)
             let y = rect.midY - dotSize / 2 + bounce
