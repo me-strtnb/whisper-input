@@ -319,6 +319,14 @@ class StatusBarController: NSObject {
 
         menu.addItem(NSMenuItem.separator())
 
+        let dictTarget = MenuItemTarget { [weak self] in
+            self?.openDictionary()
+        }
+        menuItemTargets.append(dictTarget)
+        let dictItem = NSMenuItem(title: "Edit Dictionary...", action: #selector(MenuItemTarget.invoke), keyEquivalent: "d")
+        dictItem.target = dictTarget
+        menu.addItem(dictItem)
+
         let reloadItem = NSMenuItem(title: "Reload Configuration", action: #selector(reloadConfiguration), keyEquivalent: "r")
         reloadItem.target = self
         menu.addItem(reloadItem)
@@ -331,6 +339,14 @@ class StatusBarController: NSObject {
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
 
         statusItem.menu = menu
+    }
+
+    private func openDictionary() {
+        DictionaryWindow.show { [weak self] in
+            guard let delegate = NSApplication.shared.delegate as? AppDelegate else { return }
+            delegate.reloadConfig()
+            self?.buildMenu()
+        }
     }
 
     @objc private func reloadConfiguration() {

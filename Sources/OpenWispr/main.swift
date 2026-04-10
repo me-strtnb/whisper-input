@@ -140,6 +140,8 @@ func cmdStatus() {
     print("Language:    \(langName) (\(config.language))")
     let toggleMode = config.toggleMode?.value ?? false
     print("Toggle:      \(toggleMode ? "on (press to start/stop)" : "off (hold to talk)")")
+    let dict = CustomDictionary.load()
+    print("Dictionary:  \(dict.vocabulary.count) vocabulary, \(dict.replacements.count) replacements")
 }
 
 let args = CommandLine.arguments

@@ -8,6 +8,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     var transcriber: Transcriber!
     var inserter: TextInserter!
     var config: Config!
+    var dictionary: CustomDictionary!
     var isPressed = false
     var isReady = false
     public var lastTranscription: String?
@@ -40,8 +41,10 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         if Config.effectiveMaxRecordings(config.maxRecordings) == 0 {
             RecordingStore.deleteAllRecordings()
         }
+        dictionary = CustomDictionary.load()
         transcriber = Transcriber(modelSize: config.modelSize, language: config.language)
         transcriber.spokenPunctuation = config.spokenPunctuation?.value ?? false
+        transcriber.vocabulary = dictionary.vocabulary
 
         DispatchQueue.main.async {
             self.statusBar.reprocessHandler = { [weak self] url in
@@ -156,9 +159,11 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         let wasDownloading: Bool
         if case .downloading = statusBar.state { wasDownloading = true } else { wasDownloading = false }
         config = newConfig
+        dictionary = CustomDictionary.load()
         recorder.preferredDeviceID = config.audioInputDeviceID
         transcriber = Transcriber(modelSize: config.modelSize, language: config.language)
         transcriber.spokenPunctuation = config.spokenPunctuation?.value ?? false
+        transcriber.vocabulary = dictionary.vocabulary
         inserter = TextInserter()
 
         hotkeyManager?.stop()
@@ -262,6 +267,9 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
+            let transcriber = self.transcriber!
+            let dictionary = self.dictionary!
+            let spokenPunctuation = self.config.spokenPunctuation?.value ?? false
             let maxRecordings = Config.effectiveMaxRecordings(self.config.maxRecordings)
             defer {
                 if maxRecordings == 0 {
@@ -269,8 +277,9 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
             do {
-                let raw = try self.transcriber.transcribe(audioURL: audioURL)
-                let text = (self.config.spokenPunctuation?.value ?? false) ? TextPostProcessor.process(raw) : raw
+                let raw = try transcriber.transcribe(audioURL: audioURL)
+                var text = spokenPunctuation ? TextPostProcessor.process(raw) : raw
+                text = dictionary.applyReplacements(text)
                 if maxRecordings > 0 {
                     RecordingStore.prune(maxCount: maxRecordings)
                 }
@@ -310,9 +319,13 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
+            let transcriber = self.transcriber!
+            let dictionary = self.dictionary!
+            let spokenPunctuation = self.config.spokenPunctuation?.value ?? false
             do {
-                let raw = try self.transcriber.transcribe(audioURL: audioURL)
-                let text = (self.config.spokenPunctuation?.value ?? false) ? TextPostProcessor.process(raw) : raw
+                let raw = try transcriber.transcribe(audioURL: audioURL)
+                var text = spokenPunctuation ? TextPostProcessor.process(raw) : raw
+                text = dictionary.applyReplacements(text)
                 DispatchQueue.main.async {
                     if !text.isEmpty {
                         self.lastTranscription = text

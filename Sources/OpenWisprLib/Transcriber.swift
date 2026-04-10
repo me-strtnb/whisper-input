@@ -4,6 +4,7 @@ public class Transcriber {
     private let modelSize: String
     private let language: String
     public var spokenPunctuation: Bool = false
+    public var vocabulary: [String] = []
 
     public init(modelSize: String = "base.en", language: String = "en") {
         self.modelSize = modelSize
@@ -28,9 +29,16 @@ public class Transcriber {
             "-nt",
             "-np",
         ]
-        // Prompt with punctuated text to guide whisper's output style
+        // Prompt with punctuated text to guide whisper's output style + vocabulary injection
+        var promptParts: [String] = []
         if language == "ja" {
-            args += ["--prompt", "こんにちは。今日はいい天気ですね。はい、そうです！"]
+            promptParts.append("こんにちは。今日はいい天気ですね。はい、そうです！")
+        }
+        if !vocabulary.isEmpty {
+            promptParts.append(vocabulary.joined(separator: ", "))
+        }
+        if !promptParts.isEmpty {
+            args += ["--prompt", promptParts.joined(separator: " ")]
         }
         if spokenPunctuation {
             args += ["--suppress-regex", "[,\\.\\?!;:\\-—]"]

@@ -63,6 +63,6 @@ upstream の変更を取り込む場合: `git fetch upstream && git merge upstre
 
 ## 今後の課題
 
-- カスタム辞書 (誤変換修正: 「苦闘点→句読点」等)
+- ~~カスタム辞書 (誤変換修正: 「苦闘点→句読点」等)~~ → 実装済み (dictionary.json + GUI)
 - アプリ名・バンドル ID のリネーム
 - モデル事前同梱 (ModelDownloader バイパス)
