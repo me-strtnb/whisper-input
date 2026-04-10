@@ -319,12 +319,8 @@ class StatusBarController: NSObject {
 
         menu.addItem(NSMenuItem.separator())
 
-        let dictTarget = MenuItemTarget { [weak self] in
-            self?.openDictionary()
-        }
-        menuItemTargets.append(dictTarget)
-        let dictItem = NSMenuItem(title: "Edit Dictionary...", action: #selector(MenuItemTarget.invoke), keyEquivalent: "d")
-        dictItem.target = dictTarget
+        let dictItem = NSMenuItem(title: "Edit Dictionary...", action: #selector(openDictionaryAction), keyEquivalent: "d")
+        dictItem.target = self
         menu.addItem(dictItem)
 
         let reloadItem = NSMenuItem(title: "Reload Configuration", action: #selector(reloadConfiguration), keyEquivalent: "r")
@@ -341,7 +337,7 @@ class StatusBarController: NSObject {
         statusItem.menu = menu
     }
 
-    private func openDictionary() {
+    @objc private func openDictionaryAction() {
         print("openDictionary called")
         DictionaryWindow.show { [weak self] in
             guard let delegate = NSApplication.shared.delegate as? AppDelegate else { return }
