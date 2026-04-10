@@ -342,6 +342,7 @@ class StatusBarController: NSObject {
     }
 
     private func openDictionary() {
+        print("openDictionary called")
         DictionaryWindow.show { [weak self] in
             guard let delegate = NSApplication.shared.delegate as? AppDelegate else { return }
             delegate.reloadConfig()
