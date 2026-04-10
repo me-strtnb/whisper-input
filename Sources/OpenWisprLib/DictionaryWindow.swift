@@ -20,7 +20,9 @@ class DictionaryWindow {
         let instance = DictionaryWindow()
         instance.onSave = onSave
         shared = instance
+        print("DictionaryWindow: creating window...")
         instance.showWindow()
+        print("DictionaryWindow: window created, visible=\(instance.window?.isVisible ?? false)")
     }
 
     private func showWindow() {
