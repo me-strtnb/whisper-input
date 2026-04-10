@@ -176,8 +176,20 @@ class DictionaryWindow {
             addReplacementRow(from: replacement.from, to: replacement.to)
         }
 
+        window.isReleasedWhenClosed = false
+        window.level = .floating
+        NSApp.setActivationPolicy(.regular)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+
+        // Revert to accessory when window closes
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: .main
+        ) { _ in
+            NSApp.setActivationPolicy(.accessory)
+        }
     }
 
     // MARK: - Row builders
