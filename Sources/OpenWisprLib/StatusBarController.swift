@@ -319,7 +319,7 @@ class StatusBarController: NSObject {
 
         menu.addItem(NSMenuItem.separator())
 
-        let dictItem = NSMenuItem(title: "Edit Dictionary...", action: #selector(openDictionaryAction), keyEquivalent: "d")
+        let dictItem = NSMenuItem(title: "Open Dictionary", action: #selector(openDictionary), keyEquivalent: "d")
         dictItem.target = self
         menu.addItem(dictItem)
 
@@ -337,13 +337,12 @@ class StatusBarController: NSObject {
         statusItem.menu = menu
     }
 
-    @objc private func openDictionaryAction() {
-        print("openDictionary called")
-        DictionaryWindow.show { [weak self] in
-            guard let delegate = NSApplication.shared.delegate as? AppDelegate else { return }
-            delegate.reloadConfig()
-            self?.buildMenu()
+    @objc private func openDictionary() {
+        let file = CustomDictionary.dictionaryFile
+        if !FileManager.default.fileExists(atPath: file.path) {
+            try? CustomDictionary.empty.save()
         }
+        NSWorkspace.shared.open(file)
     }
 
     @objc private func reloadConfiguration() {
